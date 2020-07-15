@@ -1,6 +1,6 @@
 'use strict'
 
-import { app, BrowserWindow, dialog, ipcMain } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu } from 'electron'
 
 /**
  * Set `__static` path to static files in production
@@ -9,7 +9,7 @@ import { app, BrowserWindow, dialog, ipcMain } from 'electron'
 if (process.env.NODE_ENV !== 'development') {
   global.__static = require('path').join(__dirname, '/static').replace(/\\/g, '\\\\')
 }
-
+Menu.setApplicationMenu(null) // 关闭工具栏
 let mainWindow
 const winURL = process.env.NODE_ENV === 'development'
   ? `http://localhost:9080`
@@ -21,7 +21,7 @@ function createWindow () {
    */
   mainWindow = new BrowserWindow({
     width: 650,
-    height: 450,
+    height: 420,
     useContentSize: true,
     webPreferences: {
       nodeIntegration: true
@@ -53,15 +53,18 @@ app.on('activate', () => {
 // 监听
 ipcMain.on('selectDirectory', function (event, p) {
   dialog.showOpenDialog({
-    properties: [p]
+    properties: [p.type]
   }, function (files) {
-    console.log(files)
     if (files) {// 如果有选中
       // 发送选择的对象给子进程
-      event.sender.send('selectedItem', files[0])
+      event.sender.send('selectedItem', {
+        path: files[0],
+        target: p.target
+      })
     }
   })
 });
+
 
 ipcMain.on('getPath', function (event) {
   let p = process.argv[1]

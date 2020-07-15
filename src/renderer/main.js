@@ -1,7 +1,7 @@
 import Vue from 'vue'
 import App from './App'
 import router from './router'
-import { Button, Row, Col, Card, Link, Alert, MessageBox, Message, Loading, Dialog, Form, FormItem, Input } from 'element-ui'
+import { Button, Row, Col, Card, Link, Alert, MessageBox, Message, Loading, Dialog, Form, FormItem, Input, Tooltip  } from 'element-ui'
 Vue.use(Button)
 Vue.use(Row)
 Vue.use(Col)
@@ -13,6 +13,7 @@ Vue.use(Dialog)
 Vue.use(Form)
 Vue.use(FormItem)
 Vue.use(Input)
+Vue.use(Tooltip)
 Vue.prototype.$msgbox = MessageBox;
 Vue.prototype.$alert = MessageBox.alert;
 Vue.prototype.$confirm = MessageBox.confirm;

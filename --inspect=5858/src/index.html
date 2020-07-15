@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>upload</title>
+  <script src="./js/jquery.min.js" ></script>
+  <style>
+    .img{
+      width: 200px;
+      height: 200px;
+    }
+  </style>
+</head>
+<body>
+  <input type="file" id="file" >
+
+  <img src="" class="img" id="img" alt="">
+
+  <script>  
+  $(document).ready(function(){
+
+    $("#file").change(function(e){
+      //console.log(e.target.files[0])
+      let file = e.target.files[0]
+      let form = new FormData()
+      form.append('file', file)
+      $.ajax({
+        url: '/upload',
+        type: "POST",
+        data: form,
+        processData: false,//重要
+        contentType: false,//重要
+        success: function(res){
+          console.log(res)
+          if(res.code === 1){
+            $("#img").attr('src', res.data)
+          }
+        }
+      })
+    })
+
+  })
+  
+  </script>
+</body>
+</html>

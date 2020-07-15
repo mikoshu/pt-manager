@@ -13,13 +13,14 @@
     <div class="content">
       <div class="header">
         <el-row>
-          <el-col :span="20">
+          <el-col :span="16">
             <h3>
               在当前目录导入工程
             </h3>
           </el-col>
-          <el-col :span="4">
-            <el-button class="right" type="primary" icon="el-icon-upload" size="mini" @click="openConfig()">新增</el-button>
+          <el-col :span="8">
+            <el-button class="right ml-8" type="info" icon="el-icon-download" size="mini" @click="chooseExportFolder">导出</el-button>
+            <el-button class="right" type="primary" icon="el-icon-plus" size="mini" @click="openConfig()">新增</el-button>
           </el-col>
         </el-row>
       </div>
@@ -27,22 +28,22 @@
         <li v-for="(val , i) in list" :key="i" @click="useTemplate(val.name, val.key, val.ignore)">
           <el-card class="box-card" shadow="always">
             <div slot="header" class="clearfix">
-              <span>
+              <p>
                 <i class="el-icon-folder-opened"></i>
                 {{val.name}}
-              </span>
+              </p>
               <i class="el-icon-delete-solid icon-remove" @click.stop="deleteTemplate(val.name, i, val.key)"></i>
               <i class="el-icon-s-tools icon-set" @click.stop="openConfig(val)" ></i>
             </div>
             <div>
-              <p>{{val.desc}}</p>
+              <p >{{val.desc}}</p>
             </div>
           </el-card>
         </li>
       </ul>
       <div class="no-data" v-if="list.length == 0">
         <dl>
-          <dd class="el-icon-folder-add"></dd>
+          <dd @click="openConfig()" class="el-icon-folder-add"></dd>
           <dt>
             暂无模板内容，点击<a href="javascript:;" @click="openConfig()" >添加</a>新增工程模板
           </dt>
@@ -66,7 +67,7 @@
         </el-form-item>
         <el-form-item label="选择目录" v-if="!edit">
           <el-input style="margin-top: 7px;" size="mini"  v-model="form.src">
-            <el-button slot="append" icon="el-icon-folder-opened" @click="openFolder" ></el-button>
+            <el-button slot="append" icon="el-icon-folder-opened" @click="openFolder('upload')" ></el-button>
           </el-input>
         </el-form-item>
         <el-form-item label="ignore规则">
@@ -86,6 +87,7 @@
 <script>
 // @ is an alias to /src
 import fs from 'fs-extra'
+import {readdir} from 'fs'
 import {ipcRenderer} from 'electron'
 import path from 'path'
 
@@ -109,7 +111,8 @@ export default {
       },
       configDialog: false,
       dir: '',
-      list: []
+      list: [],
+      exportFolder: ''
     }
   },
   mounted(){
@@ -127,6 +130,7 @@ export default {
       }else{
         this.dir = path
       }
+      // this.dir = 'D:/测试项目/manage-test'
     },
     reloadList(){ // 更新模板列表
       let jsonSrc = path.join(__dirname,'/CONFIG.json')
@@ -137,20 +141,39 @@ export default {
         fs.writeJsonSync(jsonSrc, [])
         this.reloadList()
       }
-      
       let json = fs.readJsonSync(jsonSrc)
-
       this.list = json
-
+    },
+    readDir(dir){ // Promise方法改造
+      return new Promise((resolve,reject) => {
+        readdir(dir,(err, files) => {
+          if(err){
+            reject(err)
+          }else{
+            resolve(files)
+          }
+        })
+      })
     },
     useTemplate(name, key, ignore){
       let loading
       let src = path.join(__dirname, '/TEMPLATES',key)
-      this.$confirm(`是否在目录 [${this.dir}] 下导入模板${name}`, '使用模板', {
+      this.$confirm(`是否在目录 [${this.dir}] 下导入模板“${name}”？`, '使用模板', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'info'
       }).then(() => { // 复制文件
+        return this.readDir(this.dir)
+      }).then(files => {
+        if(files.length > 0){
+          return this.$confirm(`当前目录不是空目录，继续导入模板将覆盖目录中重名文件，是否继续？`, '非空目录', {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'info'
+          })
+        }
+        return Promise.resolve()
+      }).then(() => {
         loading = this.$loading({ // loading
           lock: true,
           text: '模板下载中，请稍候...',
@@ -172,6 +195,9 @@ export default {
     copyFile(src, target, ignore){
       return new Promise((resolve, reject) => {
         const filterFunc = (src, dest) => {
+          if(ignore === ''){
+            return true
+          }
           let ignoreArray = ignore.split(',')
           for(let ig of ignoreArray){
             if(src.indexOf(ig) > -1){
@@ -232,15 +258,30 @@ export default {
       }
       this.configDialog = true
     },
-    openFolder(){
-      ipcRenderer.send('selectDirectory','openDirectory');
+    openFolder(target){
+      ipcRenderer.send('selectDirectory',{
+        type: 'openDirectory',
+        target: target
+      });
     },
-    getPath(e,path){
-      if(path === null){
-        this.$message.error('请选择一个模板目录')
-        return
+    getPath(e,opt){
+      let path = opt.path
+      console.log(opt)
+      if(opt.target === 'upload'){
+        if(path === null){
+          this.$message.error('请选择一个模板目录')
+          return
+        }
+        this.form.src = path
+      }else{
+        if(path === null){
+          this.$message.error('请选择一个模板导出目录')
+          return
+        }
+        this.exportFolder = path
+        this.exportTemplate()
       }
-      this.form.src = path
+      
     },
     getRandomCode(length) { // 生成随机字符串
       if (length > 0) {
@@ -255,7 +296,6 @@ export default {
         return false;
       }
     },
-
     createTemplate(){
       for(let key in this.rules){
         if(this.form[key] == ''){
@@ -272,7 +312,7 @@ export default {
       let json = fs.readJsonSync(jsonSrc)
       let hasTemplate = false  // 判断是否已经存在同名模板
       for(let val of json){
-        if(val.name === this.form.name && !this.eidt){
+        if(val.name === this.form.name && !this.edit){
           hasTemplate = true
           this.$alert('该模板名称已存在，请更换模板名称避免模板冲突', '模板已存在', {
             confirmButtonText: '确定',
@@ -321,6 +361,56 @@ export default {
         this.$message.error(err.message)
         loading.close();
       })
+    },
+    chooseExportFolder(){ // 选择模板导出目录
+      this.$alert('请先选择一个目录导出模板', '选择目录', {
+        confirmButtonText: '确定',
+        callback: action => {
+          if(action === 'confirm'){
+            this.openFolder('export')
+          }
+        }
+      });
+    },
+    exportTemplate(){ // 导出并重命名所有模板
+      let loading
+      this.$confirm(`是否在目录${this.exportFolder}中导出所有项目模板`, '导出模板', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'info'
+      }).then(() => {
+        loading = this.$loading({ // loading
+          lock: true,
+          text: '模板拷贝中，请稍候...',
+          spinner: 'el-icon-loading',
+          background: 'rgba(0, 0, 0, 0.7)'
+        });
+        let src = path.join(__dirname,'/TEMPLATES')
+        let jsonSrc = path.join(__dirname,'/CONFIG.json')
+        const json = fs.readJsonSync(jsonSrc)
+        readdir(src, (err, files) => {
+          files.map(val => {
+            let name
+            json.map(config => {
+              if(config.key === val){
+                name = config.name
+              }
+            })
+            try{
+              fs.copySync(path.join(__dirname,'/TEMPLATES',val), path.join(this.exportFolder,name))
+            } catch(err) {
+              this.$message.error(err.message)
+              loading.close()
+            }
+            setTimeout(() => {
+              loading.close()
+            }, 1000);
+          })
+        })
+      }).catch(err => {
+        this.$message.error(err.message)
+        loading.close()
+      })
     }
   }
 }
@@ -333,7 +423,9 @@ $c-danger: #F56C6C;
 $c-info: #999;
 $c-primary: #409EFF;
 
-
+.ml-8{
+  margin-left: 8px;
+}
 .page-home{
   padding-top: 30px;
   .top-bar{
@@ -341,6 +433,9 @@ $c-primary: #409EFF;
     height: 30px;
     background: $c-primary;
     
+  }
+  .hide{
+    display: none;
   }
   .fixed{
     position: fixed;
@@ -374,12 +469,14 @@ $c-primary: #409EFF;
     padding-top: 80px;
     text-align: center;
     dd{
-      font-size: 80px;
+      font-size: 100px;
       color: $c-info;
+      cursor: pointer;
     }
     dt{
       margin-top: 10px;
-      font-size: 14px;
+      font-size: 16px;
+      color: $c-info;
       a{
         color:$c-primary;
       }
@@ -391,14 +488,16 @@ $c-primary: #409EFF;
 
     .icon-remove{
       float: right;
-      margin-top: 4px;
+      margin-top: 0px;
       color: $c-danger;
+      font-size: 18px;
     }
     .icon-set{
       float: right;
-      margin-top: 4px;
+      margin-top: 0px;
       margin-right: 5px;
       color: $c-info;
+      font-size: 18px;
     }
     p{
       height: 20px;
@@ -424,11 +523,14 @@ $c-primary: #409EFF;
   }
   .el-card__header{
     padding: 5px 10px;
-    span{
-      width: 100%;
+    height: 30px;
+    p{
+      float: left;
+      width: calc(100% - 50px);
       overflow:hidden;
       text-overflow:ellipsis;
       white-space:nowrap;
+      color: #333;
     }
   }
   .el-card__body{
