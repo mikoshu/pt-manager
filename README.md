@@ -1,25 +1,27 @@
-# app
+# pt-manage 项目模板管理工具
 
-> An electron-vue project
+基于electron开发的app，用于快捷管理各个不同的功能项目模板，将模板内容导入到自己需要的文件夹，实现模板统一管理，快速导入。（无需网络，本地管理）
 
-#### Build Setup
+#### 开始
 
-``` bash
-# install dependencies
-npm install
+在当前的github的`release`分支下下载`.exe`安装包，双击即可安装。
 
-# serve with hot reload at localhost:9080
-npm run dev
+#### 使用方法
 
-# build electron application for production
-npm run build
+在文件夹内点击鼠标右键，或者在文件夹图标里直接右键，在右键菜单栏里点击`在当前目录打开PT-manage` 选项，点击即可打开软件，并将操作目录指定为当前选择文件夹目录。
 
+##### 添加模板
 
-# lint all JS/Vue component files in `src/`
-npm run lint
+选择需要添加的模板文件夹，上传后该模板会保存至安装目录下的`TEMPLATES`目录下，可批量导出上传的模板。
 
-```
+![上传模板](http://tool.mikoshu.me/1595296427%281%29.jpg)
 
----
+##### 选择模板
 
-This project was generated with [electron-vue](https://github.com/SimulatedGREG/electron-vue)@[45a3e22](https://github.com/SimulatedGREG/electron-vue/tree/45a3e224e7bb8fc71909021ccfdcfec0f461f634) using [vue-cli](https://github.com/vuejs/vue-cli). Documentation about the original structure can be found [here](https://simulatedgreg.gitbooks.io/electron-vue/content/index.html).
+可以选择一个需要导入到当前文件内的模板，点击确认后会将模板内的文件通过`igonre`规则过滤后复制到当前操作的目录内。
+
+![使用模板](http://tool.mikoshu.me/1595296688%281%29.jpg)
+
+其实从本质来讲就是一个简单的复制黏贴，加上过滤的功能，和统一的模板管理功能，在开发项目的时候能够更快的拉取模板。
+
+![完整流程](http://tool.mikoshu.me/demo.gif)
